@@ -4,6 +4,10 @@ from icey import personality
 from icey.brain import Cerebro
 
 
+def mostrar(trecho):
+    print(trecho, end="", flush=True)
+
+
 def main():
     cerebro = Cerebro()
     print(f"{personality.NOME}: {personality.saudacao()}")
@@ -17,10 +21,12 @@ def main():
             break
         if not texto:
             continue
-        resposta = cerebro.responder(texto)
+        print(f"{personality.NOME}: ", end="", flush=True)
+        resposta = cerebro.responder(texto, ao_receber=mostrar)
         if resposta is None:
-            resposta = personality.erro_servidor()
-        print(f"{personality.NOME}: {resposta}")
+            print(personality.erro_servidor())
+        else:
+            print()
     print(f"{personality.NOME}: {personality.despedida()}")
 
 
