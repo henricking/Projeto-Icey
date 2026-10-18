@@ -23,7 +23,7 @@ class Cerebro:
             + self.historico
         )
         corpo = json.dumps(
-            {"messages": mensagens, "max_tokens": 100, "temperature": 0.7, "repeat_penalty": 1.15, "top_p": 0.9}
+            {"messages": mensagens, "max_tokens": 100, "temperature": 0.45, "repeat_penalty": 1.08, "top_p": 0.85}
         ).encode("utf-8")
         pedido = urllib.request.Request(
             self.url, data=corpo, headers={"Content-Type": "application/json"}
