@@ -1,9 +1,11 @@
 """Ponto de entrada da Icey."""
 
 from icey import personality
+from icey.brain import Cerebro
 
 
 def main():
+    cerebro = Cerebro()
     print(f"{personality.NOME}: {personality.saudacao()}")
     while True:
         try:
@@ -15,7 +17,10 @@ def main():
             break
         if not texto:
             continue
-        print(f"{personality.NOME}: {personality.sem_resposta()}")
+        resposta = cerebro.responder(texto)
+        if resposta is None:
+            resposta = personality.erro_servidor()
+        print(f"{personality.NOME}: {resposta}")
     print(f"{personality.NOME}: {personality.despedida()}")
 
 
