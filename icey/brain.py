@@ -4,6 +4,8 @@ import json
 import urllib.request
 
 from icey import personality
+from icey.memory import Memoria, vale_guardar
+from icey.perfil import Perfil
 
 URL = "http://127.0.0.1:8080/v1/chat/completions"
 MAX_MENSAGENS = 6
@@ -13,15 +15,51 @@ class Cerebro:
     def __init__(self, url=URL):
         self.url = url
         self.historico = []
+        self.memoria = Memoria()
+        self.perfil = Perfil()
+
+    def _sistema(self, texto):
+        sistema = personality.SYSTEM_PROMPT + (
+            " Quem fala com você é o USUÁRIO, uma pessoa real. "
+            "Quando ele diz 'eu' ou 'meu', fala dele mesmo, nunca de você."
+        )
+        fatos = self.perfil.como_texto()
+        if fatos:
+            sistema += "\n\nFatos confirmados sobre o usuário:\n" + fatos
+        lembrancas = self.memoria.buscar(texto)
+        if lembrancas:
+            itens = "\n".join(f'- O usuário disse: "{m}"' for m in lembrancas)
+            sistema += (
+                "\n\nCoisas que o usuário disse antes. "
+                "Use só se forem relevantes:\n" + itens
+            )
+        return sistema
 
     def responder(self, texto, ao_receber=None):
-        """Devolve a resposta completa, ou None se o servidor falhar.
+        """Devolve a resposta completa, ou None se o servidor falhar."""
+        direta = self.perfil.responder_direto(texto)
+        if direta:
+            if ao_receber:
+                ao_receber(direta)
+            self.historico.append({"role": "user", "content": texto})
+            self.historico.append({"role": "assistant", "content": direta})
+            self.historico = self.historico[-MAX_MENSAGENS:]
+            return direta
 
-        Se ao_receber for dado, é chamado a cada pedaço de texto recebido.
-        """
+        aprendeu = self.perfil.aprender(texto)
+        if aprendeu:
+            itens = ", ".join(f"{r[1]}: {r[2]}" for r in aprendeu)
+            resposta = f"Anotado no seu perfil ({itens})."
+            if ao_receber:
+                ao_receber(resposta)
+            self.historico.append({"role": "user", "content": texto})
+            self.historico.append({"role": "assistant", "content": resposta})
+            self.historico = self.historico[-MAX_MENSAGENS:]
+            return resposta
+        sistema = self._sistema(texto)
         self.historico.append({"role": "user", "content": texto})
         mensagens = (
-            [{"role": "system", "content": personality.SYSTEM_PROMPT}]
+            [{"role": "system", "content": sistema}]
             + personality.EXEMPLOS
             + self.historico
         )
@@ -63,4 +101,6 @@ class Cerebro:
             return None
         self.historico.append({"role": "assistant", "content": resposta})
         self.historico = self.historico[-MAX_MENSAGENS:]
+        if not aprendeu and vale_guardar(texto):
+            self.memoria.salvar(texto, "conversa")
         return resposta
